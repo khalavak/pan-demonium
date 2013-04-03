@@ -1,4 +1,15 @@
 pan-demonium
-============
+=================
 
-pan-demonium is a python script that searches a *nix system for Primary Account Numbers(PANs) and reports these via syslog or email. The script can be used to verify that a *nix system does not have PANs stored that woudl violate the PCI-DSS and Data Retention requirements. 
+pan-demonium is a python script that uses unix command-line-tools find, grep and egrep for 
+searching the local filesystem for Primary Account Numbers(PANs) using different regular expressions 
+that matches PANs for the major card branches.
+
+pan-demonium then lists all found PANs together with the card branch to which that PAN belongs 
+and can send notifications via email and syslog.
+
+    - American Express (amex)
+    - Discover (discover)
+    - Mastercard (mastercard)
+    - VISA (visa)
+
