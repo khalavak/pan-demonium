@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 """Script to search filesystem for Primary Account Numbers(PANs)"""
 
+#
 # Import modules
+#
+
 import argparse
 import subprocess
 import logging
 import branch_regexpes
 
+#
 # Set global variables
+#
+
 search_dirs = "/tmp /home /opt"
 log_file = "pan-demonium.log"
 pan_all = []
@@ -25,43 +31,40 @@ Author: Kim Halavakoski <kim.halavakoski@crosskey.fi>
 Date: 3.4.2013
 
 """
-
+#
 # Parse arguments
+#
+
 parser = argparse.ArgumentParser(description=pandemonium_description)
 parser.add_argument('-d','--dir', help='Search directory',
                     required=False, action='store',dest='search_dirs')
-parser.add_argument('-r', '--report', help='Show PAN report',
-                    required=False,action='store_true')
 parser.add_argument('-v','--verbose', help='Show verbose debugging information',
                     required=False, action="store_true")
-parser.add_argument('-l','--log', help='Enable logging',
+parser.add_argument('-l','--log', help='Enable logging to logfile',
                     required=False, action='store_true')
 parser.add_argument('--log-file', help='Set logfile',
                    required=False, action='store', dest='log_file')
 
 args = parser.parse_args()
 
-# Override the default global variables if set via arguments
-if args.search_dirs:
-    search_dirs = args.search_dirs
 
-if args.log_file:
-    log_file = args.log_file
-
-
+#
 # Functions
+#
 
 def logPAN(message):
+    """ Log PANs to logfile """
 
     if args.verbose:
         print "Logging PAN: %s" % message
 
-    filename, pan, branch = message
-    logmessage = "file=%s PAN=%s branch=%s" %(filename, pan, branch)
+    filename, pan, branch,luhn = message
+    logmessage = "file=%s PAN=%s branch=%s luhn=%s" %(filename, pan, branch,luhn)
     log.warning(logmessage)
 
 
 def findPAN():
+    """ Search filesystem for PANs """
 
     if args.verbose:
         print "Searching PANs in %s" % search_dirs
@@ -86,6 +89,7 @@ def findPAN():
 
 
 def findAmexPAN():
+    """ Find Amex PANs using regexps """
 
     description = "AMEX card numbers"
     info = "The detected files contain possible American Express credit card numbers - start with the numbers 34 or 37."
@@ -106,7 +110,9 @@ def findAmexPAN():
     
     return pan_amex
 
+
 def findDiscover6011xPAN():
+    """ Find Discover PANs using regexps """
 
     description = "Discover credit card numbers (6011x)"
     info = "The detected files contain possible Discover credit card numbers -  start with 6011 and contain 16 digits."
@@ -129,6 +135,7 @@ def findDiscover6011xPAN():
 
 
 def findDiscover65xPAN():
+    """ Find Discover PANs using regexps """
 
     description = "Discover credit card numbers (65x)"
     info = "Modify the /usr/bin/find directory to search the desired location"
@@ -152,6 +159,7 @@ def findDiscover65xPAN():
 
 
 def findMastercardPAN():
+    """ Find Mastercard PANs using regexps """
 
     description = "Mastercard card numbers"
     info = "Modify the /usr/bin/find directory to search the desired location"
@@ -175,6 +183,7 @@ def findMastercardPAN():
 
 
 def findVisa13PAN():
+    """ Find Visa PANs using regexps """
 
     description = "Visa 13-digit card numbers"
     info = "Modify the /usr/bin/find directory to search the desired location"
@@ -199,6 +208,7 @@ def findVisa13PAN():
 
 
 def findVisa16PAN():
+    """ Find Visa PANs using regexps """
 
     description = "Visa 16-digit card numbers"
     info = "Modify the /usr/bin/find directory to search the desired location"
@@ -223,10 +233,13 @@ def findVisa16PAN():
 
 
 
-def luhn_checksum(card_number):
+def checkLUHN(pan):
+    """ Check PAN with the Luhn-algorithm """
+
     def digits_of(n):
         return [int(d) for d in str(n)]
-    digits = digits_of(card_number)
+    
+    digits = digits_of(pan)
     odd_digits = digits[-1::-2]
     even_digits = digits[-2::-2]
     checksum = 0
@@ -242,19 +255,22 @@ def luhn_checksum(card_number):
 
 
 
-def is_luhn_valid(card_number):
-    return  luhn_checksum(card_number) == 0
+def calculateLUHN():
+    """ Go through found PANs and do the luhn-check """
 
+    for item in pan_all:
+        filename,pan,branch = item
+        is_luhn=checkLUHN(pan)
+        item.append(is_luhn)
 
-
-def luhn(pan):
-    r = [int(ch) for ch in str(pan)][::-1]
-    return (sum(r[0::2]) + sum(sum(divmod(d*2,10)) for d in r[1::2])) % 10 == 0
 
 def reportPAN():
+    """ Make report of the found PANs """
 
+    # Count the found PANs
     pan_count = len(pan_all)
 
+    # Print a pretty report
     print ""
     print "PAN Search Report"
     print "================="
@@ -262,8 +278,8 @@ def reportPAN():
     pan_count
     print ""
     for item in pan_all:
-        filename, pan, branch = item
-        print "file=%s PAN=%s branch=%s" % (filename, pan,branch)
+        filename, pan, branch,luhn = item
+        print "file=%s PAN=%s branch=%s luhn=%s" % (filename, pan,branch,luhn)
 
     print ""
     print "Make sure that these PANs are handled according to PCI-DSS and your \
@@ -282,15 +298,21 @@ if args.log_file:
     log_file = args.log_file
 
 
-# Parse arguments and do stuff
-
+# Do stuff
 
 if args.verbose:
     print pandemonium_description
 
+# Find the PANs
 findPAN()
+
+# Calculate the Luhn for found PANs
+calculateLUHN()
+
+# Print pretty report for the found PANs
 reportPAN()
 
+# Log actions to logfile 
 if args.log:
 
     log = logging.getLogger('pan-demonium')
@@ -306,7 +328,11 @@ if args.log:
     handler_file.setFormatter(formatter)
 
     log.addHandler(handler_file)
+    log.info("Starting pan-demonium")
+    log.info("Checking directories %s" % search_dirs)
 
     for pan in pan_all:
         logPAN(pan)
+
+    log.info("Stopping pan-demonium")
 
