@@ -38,3 +38,29 @@
 2013-04-03 20:17:05,075 pan-demonium[23560] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=4508473671828091 branch=visa luhn=True
 2013-04-03 20:17:05,075 pan-demonium[23560] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=4913474858675551 branch=visa luhn=True
 2013-04-03 20:17:05,075 pan-demonium[23560] [INFO]: Stopping pan-demonium
+2013-04-10 09:16:52,947 pan-demonium[11338] [INFO]: Starting pan-demonium
+2013-04-10 09:16:52,948 pan-demonium[11338] [INFO]: Checking directories /home/khalavak/bin/pan-demonium/test
+2013-04-10 09:21:45,972 pan-demonium[11546] [INFO]: Starting pan-demonium
+2013-04-10 09:21:45,972 pan-demonium[11546] [INFO]: Checking directories /home/khalavak/bin/pan-demonium/test
+2013-04-10 09:23:52,057 pan-demonium[11606] [INFO]: Starting pan-demonium
+2013-04-10 09:23:52,057 pan-demonium[11606] [INFO]: Checking directories /home/khalavak/bin/pan-demonium/test
+2013-04-10 09:24:08,412 pan-demonium[11648] [INFO]: Starting pan-demonium
+2013-04-10 09:24:08,413 pan-demonium[11648] [INFO]: Checking directories /home/khalavak/bin/pan-demonium/test
+2013-04-10 09:24:08,413 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=375842763104264 branch=amex 
+2013-04-10 09:24:08,413 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=375978812949695 branch=amex 
+2013-04-10 09:24:08,413 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=6011438771832470 branch=discover 
+2013-04-10 09:24:08,413 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=6011029084477150 branch=discover 
+2013-04-10 09:24:08,413 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=6011438771832441 branch=discover 
+2013-04-10 09:24:08,414 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=5235934977157615 branch=mastercard 
+2013-04-10 09:24:08,414 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=5190526338109153 branch=mastercard 
+2013-04-10 09:24:08,414 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=5480293057646852 branch=mastercard 
+2013-04-10 09:24:08,414 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=5573803603544324 branch=mastercard 
+2013-04-10 09:24:08,414 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=5484124855709160 branch=mastercard 
+2013-04-10 09:24:08,414 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=5426959306981582 branch=mastercard 
+2013-04-10 09:24:08,414 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=4839730780570892 branch=visa 
+2013-04-10 09:24:08,414 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=4532022796261959 branch=visa 
+2013-04-10 09:24:08,415 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=4716867282265882 branch=visa 
+2013-04-10 09:24:08,415 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=4508160455681727 branch=visa 
+2013-04-10 09:24:08,415 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=4508473671828091 branch=visa 
+2013-04-10 09:24:08,415 pan-demonium[11648] [WARNING]: file=/home/khalavak/bin/pan-demonium/test/fake-creditcards.txt PAN=4913474858675551 branch=visa 
+2013-04-10 09:24:08,415 pan-demonium[11648] [INFO]: Stopping pan-demonium

@@ -17,6 +17,7 @@ import branch_regexpes
 search_dirs = "/tmp /home /opt"
 log_file = "pan-demonium.log"
 pan_all = []
+pan_luhn = []
 
 pandemonium_description =  """
 pan-demonium.py - Payment Card Number Search Tool
@@ -44,7 +45,8 @@ parser.add_argument('-l','--log', help='Enable logging to logfile',
                     required=False, action='store_true')
 parser.add_argument('--log-file', help='Set logfile',
                    required=False, action='store', dest='log_file')
-
+parser.add_argument('-u', '--luhn', help='Show Luhn check output',
+                    required=False, action='store_true')
 args = parser.parse_args()
 
 
@@ -58,9 +60,10 @@ def logPAN(message):
     if args.verbose:
         print "Logging PAN: %s" % message
 
-    filename, pan, branch,luhn = message
-    logmessage = "file=%s PAN=%s branch=%s luhn=%s" %(filename, pan, branch,luhn)
+    filename, pan, branch = message
+    logmessage = "file=%s PAN=%s branch=%s " %(filename,pan, branch)
     log.warning(logmessage)
+
 
 
 def findPAN():
@@ -261,7 +264,9 @@ def calculateLUHN():
     for item in pan_all:
         filename,pan,branch = item
         is_luhn=checkLUHN(pan)
-        item.append(is_luhn)
+        newitem = [filename,pan,branch,is_luhn]
+
+        pan_luhn.append(newitem)
 
 
 def reportPAN():
@@ -278,8 +283,18 @@ def reportPAN():
     pan_count
     print ""
     for item in pan_all:
-        filename, pan, branch,luhn = item
-        print "file=%s PAN=%s branch=%s luhn=%s" % (filename, pan,branch,luhn)
+        filename, pan, branch = item
+        print "file=%s PAN=%s branch=%s" % (filename,pan,branch)
+
+    if args.luhn:
+
+        print ""
+        print "The following PANs passed the Luhn-check:"
+        print ""
+
+        for item in pan_luhn:
+            filename, pan, branch,luhn = item
+            print "file=%s PAN=%s branch=%s luhn=%s" % (filename,pan,branch,luhn)
 
     print ""
     print "Make sure that these PANs are handled according to PCI-DSS and your \
