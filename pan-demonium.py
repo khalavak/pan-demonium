@@ -5,6 +5,7 @@
 # Import modules
 #
 
+import re
 import argparse
 import subprocess
 import logging
@@ -17,7 +18,9 @@ import branch_regexpes
 search_dirs = "/tmp /home /opt"
 log_file = "pan-demonium.log"
 pan_all = []
-pan_luhn = []
+pan_record = {"file":u"filename","PAN":1234567890,"branch":u"branchname","luhn":u"luhncheck"}
+
+
 
 pandemonium_description =  """
 pan-demonium.py - Payment Card Number Search Tool
@@ -54,20 +57,8 @@ args = parser.parse_args()
 # Functions
 #
 
-def logPAN(message):
-    """ Log PANs to logfile """
-
-    if args.verbose:
-        print "Logging PAN: %s" % message
-
-    filename, pan, branch = message
-    logmessage = "file=%s PAN=%s branch=%s " %(filename,pan, branch)
-    log.warning(logmessage)
-
-
-
-def findPAN():
-    """ Search filesystem for PANs """
+def iterateBranch():
+    """ Search filesystem for PANs from Cardbranch ranges """
 
     if args.verbose:
         print "Searching PANs in %s" % search_dirs
@@ -91,149 +82,339 @@ def findPAN():
         pan_all.append(pan)
 
 
+def findPAN(branch):
+    """ Find PANs for branch. Use class CardBranch from branch_regexps.py to get branch information. """
+
+    branch = CardBranch.branch
+    branch_description = CardBranch.description
+    branch_info = CardBranch.info
+    branch_cmd = CardBranch.cmd
+    branch_regexp = CardBranch.regexp
+
+    pan_temp_raw = subprocess.check_output(cmd, shell=True)
+    
+    if pan_temp_raw.strip() != "0":
+        for item in pan_temp_raw.splitlines():
+
+            # Get the filename from the egrep output
+            filename_raw = item.split(':')[0]
+
+            # Put the rest in content_raw
+            rest_raw = item.split(':')[1:]
+            content_raw = ''.join(rest_raw)
+ 
+            # Get the PANs from the content_raw variable using regexp 
+            pan_raw=branch_regexp.findall(content_raw)
+    
+            for item in pan_raw:
+
+                # Calculate Luhn for the PAN
+                luhncheck=checkLUHN(item)
+    
+                # Store the file, PAN, branch and luhn-check results in a dictionary
+                pan_record = {"file":filename_raw,"PAN":pan_raw,"branch":branch,"luhncheck":luhncheck}
+    
+                # Append the extracted record to a temporary list pan_temp
+                pan_temp.append(pan_record)
+    
+        if args.verbose:
+            print  "\n" + description + "(%d):" % len(pan_temp)
+            for item in pan_temp:
+                print item
+   
+    # Return the temporary list pan_temp
+    return pan_temp
+
+
 def findAmexPAN():
     """ Find Amex PANs using regexps """
 
     description = "AMEX card numbers"
+    branch = "amex"
     info = "The detected files contain possible American Express credit card numbers - start with the numbers 34 or 37."
     cmd = "/usr/bin/find %s -type f -print0 |/usr/bin/xargs -0 /bin/egrep -H -s '([^0-9a-zA-Z_-]|^)(3(4[0-9]{2}|7[0-9]{2})( |-|)[0-9]{6}( |-|)[0-9]{5})([^0-9a-zA-Z_-]|$)'| /bin/egrep '\:[^0]' || /bin/echo '0'" % search_dirs
+    branch_regexp = re.compile("(34[0-9]{2}|7[0-9]{2}[\s-]{0,1}[0-9]{6}[\s-]{0,1}[0-9]{5})")
 
-    pan_amex = []
-    pan_amex_raw = subprocess.check_output(cmd, shell=True)
-
-    if pan_amex_raw.strip() != "0":
-        for item in pan_amex_raw.splitlines():
-            pan = item.split(':')
-            pan.append("amex")
-            pan_amex.append(pan)
-
-        if args.verbose:
-            print  "\n" + description + ":"
-            print pan_amex
+    pan_temp = []
+    pan_raw = []
+    content_raw = ""
+    filename_raw = ""
+    pan_temp_raw = subprocess.check_output(cmd, shell=True)
     
-    return pan_amex
+    if pan_temp_raw.strip() != "0":
+        for item in pan_temp_raw.splitlines():
 
+            # Get the filename from the egrep output
+            filename_raw = item.split(':')[0]
 
+            # Put the rest in content_raw
+            rest_raw = item.split(':')[1:]
+            content_raw = ''.join(rest_raw)
+ 
+            # Get the PANs from the content_raw variable using regexp 
+            pan_raw=branch_regexp.findall(content_raw)
+                        
+            for item in pan_raw:
+
+                # Calculate Luhn for the PAN
+                luhncheck=checkLUHN(item)
+            
+                # Store the file, PAN, branch and luhn-check results in a dictionary
+                pan_record = {"file":filename_raw,"PAN":pan_raw,"branch":branch,"luhncheck":luhncheck}
+           
+                # Append the extracted record to a temporary list pan_temp
+                pan_temp.append(pan_record)
+                
+        if args.verbose:
+            print  "\n" + description + "(%d):" % len(pan_temp)
+            for item in pan_temp:
+                print item
+   
+    # Return the temporary list pan_temp
+    return pan_temp
+
+7
 def findDiscover6011xPAN():
     """ Find Discover PANs using regexps """
 
     description = "Discover credit card numbers (6011x)"
+    branch = "discover"
     info = "The detected files contain possible Discover credit card numbers -  start with 6011 and contain 16 digits."
     cmd =  "/usr/bin/find %s -type f -print0 |/usr/bin/xargs -0 /bin/egrep -H -s '([^0-9a-zA-Z_-]|^)(6011( |-|)[0-9]{4}( |-|)[0-9]{4}( |-|)[0-9]{4})([^0-9a-zA-Z_-]|$)'| /bin/egrep '\:[^0]' || /bin/echo '0'" % search_dirs
- 
-    pan_discover6011x = []
-    pan_discover6011x_raw = subprocess.check_output(cmd, shell=True)
+    branch_regexp = re.compile("(6011[\s-]{0,1}[0-9]{4}[\s-]{0,1}[0-9]{4}[\s-]{0,1}[0-9]{4})")
 
-    if pan_discover6011x_raw.strip() != "0":
-        for item in pan_discover6011x_raw.splitlines():
-            pan = item.split(':')
-            pan.append("discover")
-            pan_discover6011x.append(pan)
+    pan_temp = []
+    pan_raw = []
+    content_raw = ""
+    filename_raw = ""
+    pan_temp_raw = subprocess.check_output(cmd, shell=True)
+    
+    if pan_temp_raw.strip() != "0":
+        for item in pan_temp_raw.splitlines():
+
+            # Get the filename from the egrep output
+            filename_raw = item.split(':')[0]
+
+            # Put the rest in content_raw
+            rest_raw = item.split(':')[1:]
+            content_raw = ''.join(rest_raw)
+ 
+            # Get the PANs from the content_raw variable using regexp 
+            pan_raw=branch_regexp.findall(content_raw)
+
+            for item in pan_raw:
+
+                # Calculate Luhn for the PAN
+                luhncheck=checkLUHN(item)
+                    
+                # Store the file, PAN, branch and luhn-check results in a dictionary
+                pan_record = {"file":filename_raw,"PAN":pan_raw,"branch":branch,"luhncheck":luhncheck}
+                    
+                # Append the extracted record to a temporary list pan_temp
+                pan_temp.append(pan_record)
 
         if args.verbose:
-            print  "\n" + description + ":" 
-            print pan_discover6011x
+            print  "\n" + description + "(%d):" % len(pan_temp)
+            for item in pan_temp:
+                print item
 
-    return pan_discover6011x
+    # Return the temporary list pan_temp
+    return pan_temp
 
 
 def findDiscover65xPAN():
     """ Find Discover PANs using regexps """
 
     description = "Discover credit card numbers (65x)"
+    branch = "discover"
     info = "Modify the /usr/bin/find directory to search the desired location"
     info = "The detected files contain possible Discover credit card numbers -  start with 65 and contain 16 digits."
     cmd =  "/usr/bin/find %s -type f -print0 |/usr/bin/xargs -0 /bin/egrep -H -s '([^0-9a-zA-Z_-]|^)(65([0-9]{2}|-|)[0-9]{4}( |-|)[0-9]{4}( |-|)[0-9]{4})([^0-9a-zA-Z_-]|$)'| /bin/egrep '\:[^0]' || /bin/echo '0'" % search_dirs
- 
-    pan_discover65x = []
-    pan_discover65x_raw = subprocess.check_output(cmd, shell=True)
+    branch_regexp = re.compile("(65([0-9]{2}|-|)[0-9]{4}( |-|)[0-9]{4}( |-|)[0-9]{4})")
 
-    if pan_discover65x_raw.strip() != "0":
-        for item in pan_discover65x_raw.splitlines():
-            pan = item.split(':')
-            pan.append("discover")
-            pan_discover65x.append(pan)
+    pan_temp = []
+    pan_raw = []
+    content_raw = ""
+    filename_raw = ""
+    pan_temp_raw = subprocess.check_output(cmd, shell=True)
+    
+    if pan_temp_raw.strip() != "0":
+        for item in pan_temp_raw.splitlines():
+
+            # Get the filename from the egrep output
+            filename_raw = item.split(':')[0]
+
+            # Put the rest in content_raw
+            rest_raw = item.split(':')[1:]
+            content_raw = ''.join(rest_raw)
+ 
+            # Get the PANs from the content_raw variable using regexp 
+            pan_raw=branch_regexp.findall(content_raw)
+
+            for item in pan_raw:
+
+                # Calculate Luhn for the PAN
+                luhncheck=checkLUHN(item)
+                    
+                # Store the file, PAN, branch and luhn-check results in a dictionary
+                pan_record = {"file":filename_raw,"PAN":pan_raw,"branch":branch,"luhncheck":luhncheck}
+                    
+                # Append the extracted record to a temporary list pan_temp
+                pan_temp.append(pan_record)
 
         if args.verbose:
-            print  "\n" + description + ":"                         
-            print pan_discover65x
+            print  "\n" + description + "(%d):" % len(pan_temp)
+            for item in pan_temp:
+                print item
 
-    return pan_discover65x
+    # Return the temporary list pan_temp
+    return pan_temp
 
 
 def findMastercardPAN():
     """ Find Mastercard PANs using regexps """
 
     description = "Mastercard card numbers"
+    branch = "mastercard"
     info = "Modify the /usr/bin/find directory to search the desired location"
     info = "The detected files contain possible MasterCard credit card numbers - start with the numbers 51 through 55 and contain 15 digits."
     cmd  =  "/usr/bin/find %s -type f -print0 |/usr/bin/xargs -0 /bin/egrep -H -s '([^0-9a-zA-Z_-]|^)(5[1-5][0-9]{2}( |-|)([0-9]{4})( |-|)([0-9]{4})( |-|)([0-9]{4}))([^0-9a-zA-Z_-]|$)'| /bin/egrep '\:[^0]' || /bin/echo '0'" % search_dirs
- 
-    pan_mastercard = []
-    pan_mastercard_raw = subprocess.check_output(cmd, shell=True)
+    branch_regexp = re.compile("(5[1-5][0-9]{2}[\s-]{0,1}[0-9]{4}[\s-]{0,1}[0-9]{4}[\s-]{0,1}[0-9]{4})")
 
-    if pan_mastercard_raw.strip() != "0":
-        for item in pan_mastercard_raw.splitlines():
-            pan = item.split(':')
-            pan.append("mastercard")
-            pan_mastercard.append(pan)
+    pan_temp = []
+    pan_raw = []
+    content_raw = ""
+    filename_raw = ""
+    pan_temp_raw = subprocess.check_output(cmd, shell=True)
+
+    if pan_temp_raw.strip() != "0":
+        for item in pan_temp_raw.splitlines():
+
+            # Get the filename from the egrep output
+            filename_raw = item.split(':')[0]
+
+            # Put the rest in content_raw
+            rest_raw = item.split(':')[1:]
+            content_raw = ''.join(rest_raw)
+
+            # Get the PANs from the content_raw variable using regexp 
+            pan_raw=branch_regexp.findall(content_raw)
+
+            for item in pan_raw:
+
+                # Calculate Luhn for the PAN
+                luhncheck=checkLUHN(item)
+                        
+                # Store the file, PAN, branch and luhn-check results in a dictionary
+                pan_record = {"file":filename_raw,"PAN":pan_raw,"branch":branch,"luhncheck":luhncheck}
+                        
+                # Append the extracted record to a temporary list pan_temp
+                pan_temp.append(pan_record)
 
         if args.verbose:
-            print  "\n" + description + ":"                         
-            print pan_mastercard
+            print  "\n" + description + "(%d):" % len(pan_temp)
+            for item in pan_temp:
+                print item
 
-    return pan_mastercard
+    # Return the temporary list pan_temp
+    return pan_temp
 
 
 def findVisa13PAN():
     """ Find Visa PANs using regexps """
 
     description = "Visa 13-digit card numbers"
+    branch = "visa"
     info = "Modify the /usr/bin/find directory to search the desired location"
     info = "The detected files contain possible Visa credit card numbers - start with the number four and contain 13 digits."
     cmd =  "/usr/bin/find %s -type f -print0 |/usr/bin/xargs -0 /bin/egrep -H -s '([^0-9a-zA-Z_-]|^)(4( |-|)([0-9]{4})( |-|)([0-9]{4})( |-|)([0-9]{4}))([^0-9a-zA-Z_-]|$)'| /bin/egrep '\:[^0]' || /bin/echo '0'" % search_dirs
- 
-    pan_visa13 = []
-    pan_visa13_raw = subprocess.check_output(cmd, shell=True)
+    branch_regexp = re.compile("(4[\s-]{0,1}[0-9]{4}[\s-]{0,1}[0-9]{4}[\s-]{0,1}[0-9]{4})")
+    pan_temp = []
+    pan_raw = []
+    content_raw = ""
+    filename_raw = ""
+    pan_temp_raw = subprocess.check_output(cmd, shell=True)
+    
+    if pan_temp_raw.strip() != "0":
+        for item in pan_temp_raw.splitlines():
 
-    if pan_visa13_raw.strip() != "0":
-        for item in pan_visa13_raw.splitlines():
-            pan = item.split(':')
-            pan.append("visa")
-            pan_visa13.append(pan)
+            # Get the filename from the egrep output
+            filename_raw = item.split(':')[0]
+
+            # Put the rest in content_raw
+            rest_raw = item.split(':')[1:]
+            content_raw = ''.join(rest_raw)
+ 
+            # Get the PANs from the content_raw variable using regexp 
+            pan_raw=branch_regexp.findall(content_raw)
+
+            for item in pan_raw:
+
+                # Calculate Luhn for the PAN
+                luhncheck=checkLUHN(item)
+                    
+                # Store the file, PAN, branch and luhn-check results in a dictionary
+                pan_record = {"file":filename_raw,"PAN":pan_raw,"branch":branch,"luhncheck":luhncheck}
+                    
+                # Append the extracted record to a temporary list pan_temp
+                pan_temp.append(pan_record)
 
         if args.verbose:
-            print  "\n" + description + ":"                         
-            print pan_visa13
-
-    return pan_visa13
-
+            print  "\n" + description + "(%d):" % len(pan_temp)
+            for item in pan_temp:
+                print item
+   
+    # Return the temporary list pan_temp
+    return pan_temp
 
 
 def findVisa16PAN():
     """ Find Visa PANs using regexps """
 
     description = "Visa 16-digit card numbers"
+    branch = "visa"
     info = "Modify the /usr/bin/find directory to search the desired location"
     info = "The detected files contain possible Visa credit card numbers - start with the number four and contain 16 digits."
     cmd =  "/usr/bin/find %s -type f -print0 |/usr/bin/xargs -0 /bin/egrep -H -s '([^0-9a-zA-Z_-]|^)(4[0-9]{3}( |-|)([0-9]{4})( |-|)([0-9]{4})( |-|)([0-9]{4}))([^0-9a-zA-Z_-]|$)'| /bin/egrep '\:[^0]' || /bin/echo '0'" % search_dirs
+    branch_regexp = re.compile("(4[0-9]{3}[\s-]{0,1}[0-9]{4}[\s-]{0,1}[0-9]{4}[\s-]{0,1}[0-9]{4})")
+
+    pan_temp = []
+    pan_raw = []
+    content_raw = ""
+    filename_raw = ""
+    pan_temp_raw = subprocess.check_output(cmd, shell=True)
+    
+    if pan_temp_raw.strip() != "0":
+        for item in pan_temp_raw.splitlines():
+
+            # Get the filename from the egrep output
+            filename_raw = item.split(':')[0]
+
+            # Put the rest in content_raw
+            rest_raw = item.split(':')[1:]
+            content_raw = ''.join(rest_raw)
  
+            # Get the PANs from the content_raw variable using regexp 
+            pan_raw=branch_regexp.findall(content_raw)
 
-    pan_visa16 = []
-    pan_visa16_raw = subprocess.check_output(cmd, shell=True)
+            for item in pan_raw:
 
-    if pan_visa16_raw.strip() != "0":
-        for item in pan_visa16_raw.splitlines():
-            pan = item.split(':')
-            pan.append("visa")
-            pan_visa16.append(pan)
+                # Calculate Luhn for the PAN
+                luhncheck=checkLUHN(item)
+                    
+                # Store the file, PAN, branch and luhn-check results in a dictionary
+                pan_record = {"file":filename_raw,"PAN":pan_raw,"branch":branch,"luhncheck":luhncheck}
+                    
+                # Append the extracted record to a temporary list pan_temp
+                pan_temp.append(pan_record)
 
         if args.verbose:
-            print  "\n" + description + ":"                         
-            print pan_visa16
+            print  "\n" + description + "(%d):" % len(pan_temp)
+            for item in pan_temp:
+                print item
 
-    return pan_visa16
-
+    # Return the temporary list pan_temp
+    return pan_temp
 
 
 def checkLUHN(pan):
@@ -257,18 +438,6 @@ def checkLUHN(pan):
         return False
 
 
-
-def calculateLUHN():
-    """ Go through found PANs and do the luhn-check """
-
-    for item in pan_all:
-        filename,pan,branch = item
-        is_luhn=checkLUHN(pan)
-        newitem = [filename,pan,branch,is_luhn]
-
-        pan_luhn.append(newitem)
-
-
 def reportPAN():
     """ Make report of the found PANs """
 
@@ -282,9 +451,10 @@ def reportPAN():
     print "A total of %s credit card numbers where found on this system:" % \
     pan_count
     print ""
-    for item in pan_all:
-        filename, pan, branch = item
-        print "file=%s PAN=%s branch=%s" % (filename,pan,branch)
+    for record in pan_all:
+
+        # Go through list of PAN records(dictionaries) and print information
+        print "file=%s PAN=%s branch=%s luhn=%s" % (record["file"], record["PAN"], record["branch"], record["luhncheck"])
 
     if args.luhn:
 
@@ -292,14 +462,25 @@ def reportPAN():
         print "The following PANs passed the Luhn-check:"
         print ""
 
-        for item in pan_luhn:
-            filename, pan, branch,luhn = item
-            print "file=%s PAN=%s branch=%s luhn=%s" % (filename,pan,branch,luhn)
+        for record in pan_all:
+            if record["luhn"] == True:
+                print "file=%s PAN=%s branch=%s luhn=%s" % (record["file"], record["PAN"], record["branch"], record["luhncheck"])
 
     print ""
-    print "Make sure that these PANs are handled according to PCI-DSS and your \
-company Data Retention policies."
+    print "Make sure that these PANs are handled according to PCI-DSS and your company Data Retention policies."
     print ""
+
+
+def logPAN(record):
+    """ Log PANs to logfile """
+
+    if args.verbose:
+        print "Logging PAN: %s" % record
+
+    
+    logmessage = "file=%s PAN=%s branch=%s luhncheck=%s " % (record["file"], record["PAN"], record["branch"], record["luhncheck"])
+    log.warning(logmessage)
+
 
 #
 # Main
@@ -319,10 +500,7 @@ if args.verbose:
     print pandemonium_description
 
 # Find the PANs
-findPAN()
-
-# Calculate the Luhn for found PANs
-calculateLUHN()
+iterateBranch()
 
 # Print pretty report for the found PANs
 reportPAN()
@@ -346,8 +524,8 @@ if args.log:
     log.info("Starting pan-demonium")
     log.info("Checking directories %s" % search_dirs)
 
-    for pan in pan_all:
-        logPAN(pan)
+    for record in pan_all:
+        logPAN(record)
 
     log.info("Stopping pan-demonium")
 
