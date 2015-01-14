@@ -1,5 +1,14 @@
 #!/usr/bin/env python
-"""Script to search filesystem for Primary Account Numbers(PANs)"""
+"""
+pan-demonium.py - Payment Card Number Search Tool
+=================================================
+Pan-Demonium Searches filesystem for Payment Card Numbers(PANs) using find and
+grep/egrep unix command-line tools. The found PANs are displayed in a report.
+Recommended usage: Run Pan-Demonium regularly from cron to find PANs on the
+system and report to system-administrators and/or PCI-DSS compliance officers.
+Author: Kim Halavakoski <kim.halavakoski@crosskey.fi>
+Date: 3.4.2013
+"""
 
 #
 # Import modules
